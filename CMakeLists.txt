@@ -77,8 +77,70 @@ add_custom_command(OUTPUT guile.cc.x
                   WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
 # Construct executable file
-file(GLOB sources ${PROJECT_SOURCE_DIR}/src/*.cc)
-add_executable(trackballs ${sources} guile.cc.x)
+add_executable(trackballs
+	src/animated.cc
+	src/animatedCollection.cc
+	src/animator.cc
+	src/baby.cc
+	src/ball.cc
+	src/bird.cc
+	src/black.cc
+	src/cactus.cc
+	src/calibrateJoystickMode.cc
+	src/colorModifier.cc
+	src/cyclicPlatform.cc
+	src/debris.cc
+	src/diamond.cc
+	src/editMode.cc
+	src/editWindows.cc
+	src/enterHighScoreMode.cc
+	src/flag.cc
+	src/font.cc
+	src/forcefield.cc
+	src/fountain.cc
+	src/game.cc
+	src/gameHook.cc
+	src/gameMode.cc
+	src/gamer.cc
+	src/general.cc
+	src/glHelp.cc
+	src/goal.cc
+	src/guile.cc
+	src/heightModifier.cc
+	src/helpMode.cc
+	src/highScore.cc
+	src/hofMode.cc
+	src/mainMode.cc
+	src/map.cc
+	src/menuMode.cc
+	src/menusystem.cc
+	src/mmad.cc
+	src/modPill.cc
+	src/myWindow.cc
+	src/pipe.cc
+	src/pipeConnector.cc
+	src/player.cc
+	src/replay.cc
+	src/scoreSign.cc
+	src/settings.cc
+	src/settingsMode.cc
+	src/setupMode.cc
+	src/sideSpike.cc
+	src/sign.cc
+	src/smartTrigger.cc
+	src/sound.cc
+	src/sparkle2d.cc
+	src/spike.cc
+	src/splash.cc
+	src/switch.cc
+	src/teleport.cc
+	src/trampoline.cc
+	src/trigger.cc
+	src/weather.cc
+
+	guile.cc.x
+)
+
 target_link_libraries(trackballs
 	${GUILE_LIBRARIES}
 	${OPENGL_LIBRARIES}
