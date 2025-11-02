@@ -1,13 +1,13 @@
-cmake_minimum_required(VERSION 2.8.12...4.0 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.15)
 project(trackballs)
 
 # Required libraries
 list (APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 find_package(Guile REQUIRED)
-find_package(SDL2 REQUIRED)
-find_package(SDL2_image REQUIRED)
-find_package(SDL2_mixer REQUIRED)
-find_package(SDL2_ttf REQUIRED)
+find_package(SDL2 CONFIG REQUIRED)
+find_package(SDL2_image CONFIG REQUIRED)
+find_package(SDL2_mixer CONFIG REQUIRED)
+find_package(SDL2_ttf CONFIG REQUIRED)
 set(OpenGL_GL_PREFERENCE "LEGACY")
 find_package(OpenGL REQUIRED)
 find_package(ZLIB REQUIRED)
@@ -63,7 +63,7 @@ foreach( d ${definitions} )
     set(defstr "${defstr}" "-D${d}")
 endforeach()
 
-include_directories(${PROJECT_SOURCE_DIR}/src ${GUILE_INCLUDE_DIRS} ${CMAKE_CURRENT_BINARY_DIR} ${SDL2_INCLUDE_DIR} ${SDL2_IMAGE_INCLUDE_DIR} ${SDL2_MIXER_INCLUDE_DIR} ${SDL2_TTF_INCLUDE_DIR} ${ZLIB_INCLUDE_DIRS} ${GC_INCLUDE_DIRS} ${Intl_INCLUDE_DIRS})
+include_directories(${PROJECT_SOURCE_DIR}/src ${GUILE_INCLUDE_DIRS} ${CMAKE_CURRENT_BINARY_DIR} ${ZLIB_INCLUDE_DIRS} ${GC_INCLUDE_DIRS} ${Intl_INCLUDE_DIRS})
 get_directory_property(includes DIRECTORY  ${CMAKE_SOURCE_DIR} INCLUDE_DIRECTORIES)
 set(incstr "")
 foreach( d ${includes} )
@@ -79,7 +79,19 @@ add_custom_command(OUTPUT guile.cc.x
 # Construct executable file
 file(GLOB sources ${PROJECT_SOURCE_DIR}/src/*.cc)
 add_executable(trackballs ${sources} guile.cc.x)
-target_link_libraries(trackballs ${GUILE_LIBRARIES} ${OPENGL_LIBRARIES} ${SDL2_LIBRARY} ${SDL2_IMAGE_LIBRARY} ${SDL2_MIXER_LIBRARY} ${SDL2_TTF_LIBRARY} ${ZLIB_LIBRARIES} ${GC_LIBRARIES} ${Intl_LIBRARIES} m)
+target_link_libraries(trackballs
+	${GUILE_LIBRARIES}
+	${OPENGL_LIBRARIES}
+	SDL2::SDL2
+	SDL2::SDL2main
+	SDL2_image::SDL2_image-static
+	SDL2_mixer::SDL2_mixer-static
+	SDL2_ttf::SDL2_ttf-static
+	${ZLIB_LIBRARIES}
+	${GC_LIBRARIES}
+	${Intl_LIBRARIES}
+	m
+)
 install(TARGETS trackballs DESTINATION ${TRACKBALLS_BIN})
 
 # Data files

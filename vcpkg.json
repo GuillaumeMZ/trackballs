@@ -1,0 +1,15 @@
+{
+	"name": "trackballs",
+	"version-semver": "1.3.5",
+	"dependencies": [
+		"sdl2",
+		{
+			"name": "sdl2-image",
+			"features": [
+				"libjpeg-turbo"
+			]
+		},
+		"sdl2-mixer",
+		"sdl2-ttf"
+	]
+}

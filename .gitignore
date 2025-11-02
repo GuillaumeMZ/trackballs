@@ -26,3 +26,5 @@ doxyfile
 *.bak
 *.user
 
+# IDE files
+.idea/

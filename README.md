@@ -27,6 +27,53 @@ Have fun playing *Trackballs*!
 
 ![Screenshot](https://trackballs.github.io/screenshots/s16.png "Screenshot")
 
+## Building Trackballs
+
+Trackballs currently requires the following development libraries to be installed on your system:
+
+- libGL (OpenGL standard 3.3 or greater)
+- Guile >=2.0.0 
+- libz
+- libm
+- gettext
+
+Instructions:
+
+- Install a C++17-compatible C++ compiler (GCC 8 or newer, Clang 7 or newer, MSVC 19.14 or newer)
+- Install CMake (3.15 or newer)
+- Install VCPKG. Ensure the `VCPKG_ROOT` environment variable is set properly.
+- Configure CMake (with debugging symbols):
+
+    ```sh
+    cmake -S . -B build -D CMAKE_BUILD_TYPE=Debug -D CMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"
+    ```
+
+- Configure CMake (without debugging symbols):
+
+    ```sh
+    cmake -S . -B build -D CMAKE_BUILD_TYPE=Release -D CMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"
+    ```
+
+- Build Trackballs (change the number after `-j` to set the number of cores to use):
+
+    ```sh
+    cmake --build build -j 8
+    ```
+  
+- Run Trackballs:
+
+    ```sh
+    ./build/trackballs.exe
+    ```
+
+### Installing Trackballs
+
+Once Trackballs has been built, run:
+
+```sh
+sudo cmake --install build
+```
+
 ### About Security
 
 Per default trackballs is not installed setuid or setgid and as such no 
