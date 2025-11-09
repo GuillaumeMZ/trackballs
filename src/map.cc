@@ -22,10 +22,14 @@
 
 #include "map.h"
 
+#include <filesystem>
+
 #include <SDL2/SDL_endian.h>
 #include <SDL2/SDL_image.h>
 #include <zlib.h>
 #include <cstdlib>
+
+namespace fs = std::filesystem;
 
 /* VISRADIUS is half-width of square of drawable cells */
 #define VISRADIUS 50
@@ -1316,7 +1320,7 @@ Chunk* Map::chunk(int cx, int cy) const {
 int Map::save(char* pathname, int x, int y) {
   int version = mapFormatVersion;
 
-  if (pathIsLink(pathname)) {
+  if (fs::is_symlink(pathname)) {
     warning("%s is a link, cannot save map", pathname);
     return 0;
   }

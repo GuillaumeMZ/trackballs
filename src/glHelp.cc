@@ -30,8 +30,13 @@
 
 #include <SDL2/SDL_image.h>
 #include <SDL2/SDL_ttf.h>
+
+#include <chrono>
 #include <cstdlib>
+#include <filesystem>
 #include <map>
+
+namespace fs = std::filesystem;
 
 float fps = 50.0;
 int screenWidth = 640, screenHeight = 480;
@@ -63,8 +68,8 @@ static GLuint dummyCascadeTexture = 0;
 static GLuint dummyCubeMapTexture = 0;
 
 void *ingameFont;
-extern struct timespec displayStartTime;
-extern struct timespec lastDisplayStartTime;
+extern std::chrono::time_point<std::chrono::system_clock> displayStartTime;
+extern std::chrono::time_point<std::chrono::system_clock> lastDisplayStartTime;
 
 const Color menuColorSelected(SRGBColor(0.86f, 0.86f, 0.86f, 1.f));
 const Color menuColor(SRGBColor(0.86f, 0.86f, 0.25f, 1.f));
@@ -1009,7 +1014,7 @@ int createSnapshot() {
   } while (again > 0);
 
   /* Check against symlinks */
-  if (pathIsLink(name)) {
+  if (fs::is_symlink(name)) {
     warning("file %s is a symlink.", name);
     return 0;
   }

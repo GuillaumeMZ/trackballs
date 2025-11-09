@@ -19,6 +19,8 @@
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
+#include <filesystem>
+
 #include "highScore.h"
 
 #include "game.h"
@@ -30,6 +32,8 @@
 #include <zlib.h>
 #include <cstdlib>
 #include <cstring>
+
+namespace fs = std::filesystem;
 
 static char highScorePath[256];
 static HighScore* highScore = NULL;
@@ -118,7 +122,7 @@ HighScore::HighScore() {
 #else
   snprintf(highScorePath, sizeof(highScorePath), "%s/highScores", effectiveShareDir);
 #endif
-  if (pathIsLink(highScorePath)) {
+  if (fs::is_symlink(highScorePath)) {
     warning("%s is a symbolic link. Cannot load highscores\n", highScorePath);
     return;
   }
@@ -153,7 +157,7 @@ void HighScore::addHighScore(int levelSet, int score, char* name) {
     dummy_player[levelSet][i] = 0;
   }
 
-  if (pathIsLink(highScorePath)) {
+  if (fs::is_symlink(highScorePath)) {
     warning("Error, %s is a symbolic link. Cannot save highscores", highScorePath);
     return;
   }

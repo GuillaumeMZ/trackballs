@@ -20,6 +20,8 @@
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
+#include <filesystem>
+
 #include "editMode.h"
 
 #include "editMode_codes.h"
@@ -36,7 +38,8 @@
 #include <SDL2/SDL_keyboard.h>
 #include <SDL2/SDL_mouse.h>
 #include <string.h>
-#include <sys/stat.h>
+
+namespace fs = std::filesystem;
 
 /* See cMenuNames_i18n inside EditMode::init for the values here */
 char* cMenuNames[N_SUBMENUS];
@@ -272,7 +275,7 @@ void EditMode::loadMap(char* name) {
   // Default load the map from the home directory if existing (same as default pathname)
   snprintf(mapname, sizeof(mapname), "%s/levels/%s.map", effectiveLocalDir, name);
 
-  if (!fileExists(mapname))
+  if (!fs::exists(mapname))
     // Alternativly from the share directory
     snprintf(mapname, sizeof(mapname) - 1, "%s/levels/%s.map", effectiveShareDir, name);
 
@@ -305,14 +308,14 @@ void EditMode::saveMap() {
   char str[768];
 
   snprintf(str, sizeof(str) - 1, "%s/levels", effectiveLocalDir);
-  if (pathIsLink(str)) {
+  if (fs::is_symlink(str)) {
     warning("Error, %s/levels is a symbolic link. Cannot save map", effectiveLocalDir);
     return;
-  } else if (!pathIsDir(str))
-    mkdir(str, S_IXUSR | S_IRUSR | S_IWUSR | S_IXGRP | S_IRGRP | S_IWGRP);
+  } else if (!fs::is_directory(str))
+    fs::create_directory(str);
 
   snprintf(mapname, sizeof(mapname) - 1, "%s/levels/%s.map", effectiveLocalDir, levelname);
-  if (pathIsLink(str)) {
+  if (fs::is_symlink(str)) {
     warning("Error, %s/levels/%s.map is a symbolic link. Cannot save map", effectiveLocalDir,
             levelname);
     return;
@@ -324,11 +327,11 @@ void EditMode::saveMap() {
 
   /* Check if there already exists a script file for this map */
   snprintf(str, sizeof(str), "%s/levels/%s.scm", effectiveShareDir, levelname);
-  if (!pathIsFile(str)) {
+  if (!fs::is_regular_file(str)) {
     snprintf(str, sizeof(str), "%s/levels/%s.scm", effectiveLocalDir, levelname);
-    if (!pathIsFile(str)) {
+    if (!fs::is_regular_file(str)) {
       /* No script file exists. Create a default one */
-      if (pathIsLink(str)) {
+      if (fs::is_symlink(str)) {
         warning("Error, %s is a symbolic link. Cannot create default script file", str);
         return;
       }

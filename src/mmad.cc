@@ -19,6 +19,9 @@
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
+#include <chrono>
+#include <filesystem>
+
 #include "calibrateJoystickMode.h"
 #include "editMode.h"
 #include "enterHighScoreMode.h"
@@ -40,26 +43,17 @@
 #include "sound.h"
 
 #include <SDL2/SDL_image.h>
-#include <dirent.h>
 #include <getopt.h>
 #include <locale.h>
-#include <sys/stat.h>
-#include <sys/time.h>
-#include <sys/types.h>
-#include <unistd.h>
 #include <queue>
 
-#ifdef WIN32
-#define WIN32_LEAN_AND_MEAN 1
-#include <shlobj.h>
-#include <windows.h>
-#endif
+namespace fs = std::filesystem;
 
 /* Important globals */
 static SDL_Window *window = NULL;
 int debug_joystick, repair_joystick;
 static int not_yet_windowed = 1;
-struct timespec displayStartTime, lastDisplayStartTime;
+std::chrono::time_point<std::chrono::system_clock> displayStartTime, lastDisplayStartTime;
 static bool has_audio = true;
 static bool startInEditMode;
 
@@ -250,29 +244,7 @@ static void print_usage(FILE *stream, const char *program_name) {
   }
 }
 
-static int testDir() {
-  if (!strlen(effectiveShareDir)) return 0;
-#ifdef WIN32
-  // Really this is just done for asthetics
-  for (int i = strlen(effectiveShareDir) - 1; i >= 0; i--)
-    if (effectiveShareDir[i] == '\\') effectiveShareDir[i] = '/';
-#endif
-  DIR *dir = opendir(effectiveShareDir);
-  // printf("Looking for %s\n", effectiveShareDir);
-  if (!dir)
-    return 0;
-  else
-    closedir(dir);
-  char str[256];
-  snprintf(str, sizeof(str), "%s/levels", effectiveShareDir);
-  dir = opendir(str);
-  if (!dir)
-    return 0;
-  else
-    closedir(dir);
-  /* TODO. Test for all other essential subdirectories */
-  return 1;
-}
+static bool testDir() { return fs::exists(fs::path(effectiveShareDir) / "levels"); }
 
 static void *mainLoop(void *data) {
   /* OpenGL work is now *only* performed on this thread. */
@@ -290,7 +262,7 @@ static void *mainLoop(void *data) {
   glHelpInit();
 
   // set the name of the window
-  struct timespec bootStart = getMonotonicTime();
+  const auto bootStart = std::chrono::system_clock::now();
   SDL_Surface *splashScreen = loadImage("splashScreen.jpg");
   glViewport(0, 0, screenWidth, screenHeight);
 
@@ -328,7 +300,7 @@ static void *mainLoop(void *data) {
   }
 
   /* Make sure splashscreen has been shown for atleast 1.5 seconds */
-  struct timespec timeNow = getMonotonicTime();
+  auto timeNow = std::chrono::system_clock::now();
   while (getTimeDifference(bootStart, timeNow) < 1.5) {
     glClear(GL_COLOR_BUFFER_BIT);
     Enter2DMode();
@@ -336,7 +308,7 @@ static void *mainLoop(void *data) {
                     texcoord[3], Color(1., 1., 1., 1.), splashTexture);
     Leave2DMode();
     SDL_GL_SwapWindow(window);
-    timeNow = getMonotonicTime();
+    timeNow = std::chrono::system_clock::now();
   }
   glDeleteTextures(1, &splashTexture);
 
@@ -347,8 +319,7 @@ static void *mainLoop(void *data) {
   /*                 */
 
   /* Initialize random number generator */
-  int seed = getMonotonicTime().tv_nsec;
-  srand(seed);
+  srand(std::chrono::system_clock::now().time_since_epoch().count());
 
   double logic_time = 0.;
   Uint32 zero_sdl_tick = SDL_GetTicks();
@@ -389,7 +360,7 @@ static void *mainLoop(void *data) {
       SDL_GL_SwapWindow(window);
 
       lastDisplayStartTime = displayStartTime;
-      displayStartTime = getMonotonicTime();
+      displayStartTime = std::chrono::system_clock::now();
       /* Expensive computations has to be done *after* tick+draw to keep world in good
          synchronisation. */
       if (GameMode::current) GameMode::current->doExpensiveComputations();
@@ -592,12 +563,11 @@ static bool setupEnvAndPaths(const char *program_name) {
   }
 
   snprintf(effectiveLocalDir, sizeof(effectiveLocalDir), "%s/.trackballs", getenv("HOME"));
-  if (pathIsLink(effectiveLocalDir)) {
+  if (fs::is_symlink(effectiveLocalDir)) {
     warning("Error, %s is a symbolic link. Cannot save settings", effectiveLocalDir);
-    return EXIT_FAILURE;
+    return false;
   }
-  if (!pathIsDir(effectiveLocalDir))
-    mkdir(effectiveLocalDir, S_IXUSR | S_IRUSR | S_IWUSR | S_IXGRP | S_IRGRP | S_IWGRP);
+  if (!fs::is_directory(effectiveLocalDir)) fs::create_directory(effectiveLocalDir);
 
   if (NULL == getenv("GUILE_LOAD_PATH")) {
     static char
@@ -653,9 +623,8 @@ int main(int argc, char **argv) {
                                         {NULL, 0, NULL, 0}};
   int next_option;
 
-  displayStartTime = getMonotonicTime();
-  lastDisplayStartTime = displayStartTime;
-  lastDisplayStartTime.tv_sec -= 1;
+  displayStartTime = std::chrono::system_clock::now();
+  lastDisplayStartTime = displayStartTime - std::chrono::seconds(1);
   Settings *settings = Settings::settings;
   settings->doSpecialLevel = 0;
   settings->setLocale(); /* Start "correct" i18n as soon as possible */
@@ -740,9 +709,9 @@ int main(int argc, char **argv) {
     char mapname[512];
 
     snprintf(mapname, sizeof(mapname) - 1, "%s/levels/%s.map", effectiveLocalDir, touchName);
-    if (!fileExists(mapname))
+    if (!fs::is_regular_file(mapname))
       snprintf(mapname, sizeof(mapname), "%s/levels/%s.map", effectiveShareDir, touchName);
-    if (!fileExists(mapname)) snprintf(mapname, sizeof(mapname), "%s", touchName);
+    if (!fs::is_regular_file(mapname)) snprintf(mapname, sizeof(mapname), "%s", touchName);
     printf("Touching map %s\n", mapname);
     Map *map = new Map(mapname);
     map->save(mapname, (int)map->startPosition[0], (int)map->startPosition[1]);

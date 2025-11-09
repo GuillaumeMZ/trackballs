@@ -20,10 +20,9 @@
 
 #include "general.h"
 
-#include <dirent.h>
 #include <stdarg.h>
-#include <sys/stat.h>
-#include <time.h>
+
+#include <chrono>
 #include <cstdlib>
 
 int low_memory;
@@ -40,53 +39,8 @@ int mymod(int v, int m) {
   return tmp;
 }
 
-int fileExists(char *name) {
-  FILE *fp = fopen(name, "rb");
-  if (fp) {
-    fclose(fp);
-    return 1;
-  }
-  return 0;
-}
-int dirExists(char *name) {
-  DIR *dir = opendir(name);
-  if (dir) closedir(dir);
-  return dir ? 1 : 0;
-}
-
-int pathIsFile(char *path) {
-  struct stat m;
-  if (lstat(path, &m)) return 0;
-  if (S_ISREG(m.st_mode)) return 1;
-  return 0;
-}
-int pathIsDir(char *path) {
-  struct stat m;
-  if (lstat(path, &m)) return 0;
-  if (S_ISDIR(m.st_mode)) return 1;
-  return 0;
-}
-int pathIsLink(char *path) {
-  struct stat m;
-  if (lstat(path, &m)) return 0;
-  if (S_ISLNK(m.st_mode)) return 1;
-  return 0;
-}
-
-struct timespec getMonotonicTime() {
-  struct timespec ts;
-  int s = clock_gettime(CLOCK_MONOTONIC, &ts);
-  if (s) {
-    warning("Failed to acquire monotonic time. %d %d", ts.tv_sec, ts.tv_nsec);
-    ts.tv_nsec = 0;
-    ts.tv_sec = 0;
-  }
-  return ts;
-}
-
-double getTimeDifference(const struct timespec &from, const struct timespec &to) {
-  double elapsed = (to.tv_sec - from.tv_sec) + 1e-9 * (to.tv_nsec - from.tv_nsec);
-  return timeDilationFactor * elapsed;
+double getTimeDifference(const std::chrono::time_point<std::chrono::system_clock>& from, const std::chrono::time_point<std::chrono::system_clock>& to) {
+  return timeDilationFactor * std::chrono::duration<double>(to - from).count();
 }
 
 void error(const char *formatstr, ...) {

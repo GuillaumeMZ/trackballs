@@ -18,19 +18,21 @@
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-#include "gamer.h"
+#include <filesystem>
+
 #include "game.h"
+#include "gamer.h"
 #include "general.h"
 #include "guile.h"
 #include "map.h"
 #include "player.h"
 #include "settings.h"
 
-#include <dirent.h>
 #include <string.h>
-#include <sys/stat.h>
 #include <zlib.h>
 #include <cstdlib>
+
+namespace fs = std::filesystem;
 
 Gamer *Gamer::gamer = NULL;
 
@@ -98,7 +100,7 @@ void Gamer::save() {
 
   Settings *settings = Settings::settings;
   snprintf(str, sizeof(str) - 1, "%s/%s.gmr", effectiveLocalDir, name);
-  if (pathIsLink(str)) {
+  if (fs::is_symlink(str)) {
     warning("Error, %s/%s.gmr is a symbolic link. Cannot save settings", effectiveLocalDir,
             name);
     return;
@@ -232,18 +234,13 @@ void Gamer::playerLose(Game *game) {
 }
 void Gamer::reloadNames() {
   nNames = 0;
-  DIR *dir = opendir(effectiveLocalDir);
-  if (dir) {
-    struct dirent *dirent;
-    while ((dirent = readdir(dir))) {
-      if (strlen(dirent->d_name) > 4 &&
-          strcmp(&dirent->d_name[strlen(dirent->d_name) - 4], ".gmr") == 0) {
-        int len = strlen(dirent->d_name);
-        for (int i = 0; i < len - 4; i++) names[nNames][i] = dirent->d_name[i];
-        names[nNames][len - 4] = 0;
-        nNames++;
-      }
-    }
-    closedir(dir);
+  const fs::path dir(effectiveLocalDir);
+
+  if (!fs::exists(dir) || !fs::is_directory(dir)) { return; }
+
+  for (const auto &file : fs::directory_iterator(dir)) {
+    if (fs::path(file).extension() != ".gmr") { continue; }
+
+    strncpy(names[nNames++], fs::path(file).stem().c_str(), 256);
   }
 }

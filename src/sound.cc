@@ -24,8 +24,11 @@
 #include "settings.h"
 
 #include <SDL2/SDL_mixer.h>
-#include <dirent.h>
+
 #include <algorithm>  // for std::min/max
+#include <filesystem>
+
+namespace fs = std::filesystem;
 
 SDL_AudioSpec audioFormat;
 
@@ -44,9 +47,6 @@ int hasMusicPreferences = 0;
 
 void soundInit() {
   mute = 0;
-  char str[512];
-  DIR *dir;
-  struct dirent *dirent;
 
   if (Mix_OpenAudio(22050, AUDIO_S16, 2, 4096) < 0) {
     warning(
@@ -59,39 +59,43 @@ void soundInit() {
 
   clearMusicPreferences();
 
-  snprintf(str, sizeof(str), "%s/sfx", effectiveShareDir);
-  dir = opendir(str);
-  if (dir) {
-    while ((dirent = readdir(dir))) {
-      if (strlen(dirent->d_name) > 4 &&
-          (strcmp(&dirent->d_name[strlen(dirent->d_name) - 4], ".wav") == 0)) {
-        snprintf(str, sizeof(str), "%s/sfx/%s", effectiveShareDir, dirent->d_name);
-        effects[n_effects] = Mix_LoadWAV(str);
-        if (effects[n_effects]) {
-          wavs[n_effects] = strdup(dirent->d_name);
-          n_effects++;
-        } else
-          warning("Failed to load '%s'\n", str);
+  const auto sfxDir = fs::path(effectiveShareDir) / "sfx";
+
+  if (fs::exists(sfxDir) && fs::is_directory(sfxDir)) {
+    for (const auto& item: fs::directory_iterator(sfxDir)) {
+      const fs::path& itemPath(item);
+
+      if (itemPath.extension() != ".wav") {
+        continue;
+      }
+
+      effects[n_effects] = Mix_LoadWAV(fs::absolute(itemPath).c_str());
+
+      if (effects[n_effects]) {
+        wavs[n_effects] = strdup(itemPath.filename().c_str());
+        n_effects++;
+      } else {
+        warning("Failed to load '%s'\n", fs::absolute(itemPath).c_str());
       }
     }
-    closedir(dir);
   }
 
   n_songs = 0;
-  snprintf(str, sizeof(str), "%s/music", effectiveShareDir);
-  dir = opendir(str);
-  if (dir) {
-    while ((dirent = readdir(dir))) {
-      if (strlen(dirent->d_name) > 4 &&
-          (strcmp(&dirent->d_name[strlen(dirent->d_name) - 4], ".ogg") == 0 ||
-           strcmp(&dirent->d_name[strlen(dirent->d_name) - 4], ".mp3") == 0)) {
-        snprintf(str, sizeof(str), "%s/music/%s", effectiveShareDir, dirent->d_name);
-        music[n_songs] = Mix_LoadMUS(str);
-        songName[n_songs] = strdup(dirent->d_name);
-        if (!music[n_songs++]) warning("Failed to load '%s'", str);
+
+  const auto musicDir = fs::path(effectiveShareDir) / "music";
+
+  if (fs::exists(musicDir) && fs::is_directory(musicDir)) {
+    for (const auto& item: fs::directory_iterator(musicDir)) {
+      const fs::path& itemPath(item);
+
+      if (itemPath.extension() != ".ogg" && itemPath.extension() != ".mp3") {
+        continue;
       }
+
+      music[n_songs] = Mix_LoadMUS(fs::absolute(itemPath).c_str());
+      songName[n_songs] = strdup(itemPath.filename().c_str());
+      if (!music[n_songs++]) warning("Failed to load '%s'", fs::absolute(itemPath).c_str());
     }
-    closedir(dir);
   }
 }
 
@@ -213,7 +217,7 @@ void clearMusicPreferences() {
 void setMusicPreference(char *name, int weight) {
   int i;
   for (i = 0; i < n_songs; i++) {
-    if (strcasecmp(songName[i], name) == 0) break;
+    if (strcmp(songName[i], name) == 0) break;
   }
   if (i == n_songs) {
     warning("setMusicPreference: failed to find song '%s'", name);

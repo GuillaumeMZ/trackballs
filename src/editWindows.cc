@@ -18,8 +18,11 @@
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-#include "editWindows.h"
+#include <chrono>
+#include <filesystem>
+
 #include "editMode.h"
+#include "editWindows.h"
 #include "map.h"
 #include "menuMode.h"
 #include "menusystem.h"
@@ -29,7 +32,8 @@
 #include <SDL2/SDL_keycode.h>
 #include <SDL2/SDL_mouse.h>
 #include <SDL2/SDL_timer.h>
-#include <dirent.h>
+
+namespace fs = std::filesystem;
 
 EMenuWindow::EMenuWindow() : MyWindow(0, 0, screenWidth, 30) {
   activeSubID = -1;
@@ -407,15 +411,15 @@ void ESaveWindow::draw() {
     addText_Center(0, fontSize / 3, row2, str, x + width / 2);
     saveCnt = 1;
   } else if (saveCnt == 1) {
-    struct timespec t0 = getMonotonicTime();
+    const auto t0 = std::chrono::system_clock::now();
     EditMode::editMode->saveMap();
     remove();
     saveCnt = 0;
     /* Make sure it takes atleast three seconds to save, so user can see the message above
      * properly */
-    struct timespec t1;
+    std::chrono::time_point<std::chrono::system_clock> t1;
     do {
-      t1 = getMonotonicTime();
+      t1 = std::chrono::system_clock::now();
       SDL_Delay(10);
     } while (getTimeDifference(t0, t1) < 3.0);
   }
@@ -559,51 +563,26 @@ void EOpenWindow::mouseDown(int button, int /*x*/, int /*y*/) {
 int sortstrcmp(const void* n1, const void* n2) { return strcmp((char*)n1, (char*)n2); }
 
 void EOpenWindow::refreshMapList() {
-  char str[512];
-  struct dirent* dirent;
-  DIR* dir;
-
   nNames = 0;
   currPage = 0;
 
-  /* Add all maps from the home directory */
-  snprintf(str, sizeof(str), "%s/levels", effectiveLocalDir);
-  dir = opendir(str);
-  if (dir) {
-    /* This iteratives over all files there */
-    while ((dirent = readdir(dir))) {
-      /* And adds the ones ending with .map */
-      if (strlen(dirent->d_name) > 4 &&
-          (strcmp(&dirent->d_name[strlen(dirent->d_name) - 4], ".map") == 0)) {
-        strncpy(str, dirent->d_name, sizeof(str));
-        str[strlen(str) - 4] = 0; /* Remove .map ending */
-        strncpy(names[nNames++], str, 256);
-      }
+  const auto addMapsFromFolder = [this](const fs::path& folder) {
+    if (!fs::exists(folder) || !fs::is_directory(folder)) { return; }
+
+    for (const auto& entry : fs::directory_iterator(folder)) {
+      if (!entry.is_regular_file() || fs::path(entry).extension() != ".map") { continue; }
+
+      strncpy(names[nNames++], fs::path(entry).filename().c_str(), 256);
     }
-    closedir(dir);
-  }
+  };
+
+  /* Add all maps from the home directory */
+  addMapsFromFolder(fs::path(effectiveLocalDir) / "levels");
+
   qsort(names, nNames, sizeof(char[256]), sortstrcmp);
   int divNames = nNames;
 
   /* Add all maps from the share directory */
-  snprintf(str, sizeof(str), "%s/levels", effectiveShareDir);
-  dir = opendir(str);
-  if (dir) {
-    /* This iteratives over all files there */
-    while ((dirent = readdir(dir))) {
-      /* And adds the ones ending with .map *but* not if they already where added from the home
-       * directory */
-      if (strlen(dirent->d_name) > 4 &&
-          (strcmp(&dirent->d_name[strlen(dirent->d_name) - 4], ".map") == 0)) {
-        strncpy(str, dirent->d_name, sizeof(str));
-        str[strlen(str) - 4] = 0; /* Remove .map ending */
-        int i;
-        for (i = 0; i < nNames; i++)
-          if (strncasecmp(str, names[i], 256) == 0) break;
-        if (i == nNames) strncpy(names[nNames++], str, 256);
-      }
-    }
-    closedir(dir);
-  }
+  addMapsFromFolder(fs::path(effectiveShareDir) / "levels");
   qsort(&names[divNames][0], nNames - divNames, sizeof(char[256]), sortstrcmp);
 }

@@ -17,12 +17,15 @@
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
+#include <filesystem>
+
 #include "replay.h"
 
-#include <sys/stat.h>
 #include <zlib.h>
 
 #include <cstring>
+
+namespace fs = std::filesystem;
 
 Replay::Replay() {}
 Replay::~Replay() {}
@@ -34,16 +37,16 @@ static bool getLogPath(const char* level_name, char log_file[768]) {
   char str[768];
 
   snprintf(str, sizeof(str) - 1, "%s/logs", effectiveLocalDir);
-  if (pathIsLink(str)) {
+  if (fs::is_symlink(str)) {
     warning("Error, %s//logs is a symbolic link. Cannot load/save replay log",
             effectiveLocalDir);
     return false;
-  } else if (!pathIsDir(str)) {
-    mkdir(str, S_IXUSR | S_IRUSR | S_IWUSR | S_IXGRP | S_IRGRP | S_IWGRP);
+  } else if (!fs::is_directory(str)) {
+    fs::create_directory(str);
   }
 
   snprintf(log_file, 768 - 1, "%s/logs/%s.log", effectiveLocalDir, level_name);
-  if (pathIsLink(str)) {
+  if (fs::is_symlink(str)) {
     warning("Error, %s/logs/%s.log is a symbolic link. Cannot load/save replay log",
             effectiveLocalDir, level_name);
     return false;

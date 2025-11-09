@@ -18,6 +18,8 @@
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
+#include <filesystem>
+
 #include "settings.h"
 
 #include "editMode.h"
@@ -25,13 +27,12 @@
 #include "guile.h"
 
 #include <SDL2/SDL_joystick.h>
-#include <dirent.h>
 #include <libguile.h>
-#include <sys/stat.h>
-#include <unistd.h>
 #include <clocale>
 #include <cstdlib>
 #include <cstring>
+
+namespace fs = std::filesystem;
 
 extern double timeDilationFactor;
 
@@ -175,44 +176,28 @@ void Settings::loadLevelSets() { scm_with_guile(Settings::doLoadLevelSets, (void
 void *Settings::doLoadLevelSets(void *data) {
   Settings *s = (Settings *)data;
   /* Load all levelsets */
-  char str[512];
   s->nLevelSets = 0;
 
   /* ugly fix to make levelset lv.set the first level set */
-  snprintf(str, sizeof(str), "%s/levels/lv.set", effectiveShareDir);
-  s->loadLevelSet(str, "lv.set");
+  s->loadLevelSet((fs::path(effectiveShareDir) / "levels" / "lv.set").c_str(), "lv.set");
 
-  snprintf(str, sizeof(str), "%s/levels", effectiveShareDir);
-  DIR *dir = opendir(str);
-  if (!dir) {
-    error("Can't find the %s/ directory", str);
-  } else {
-    struct dirent *dirent;
-    while ((dirent = readdir(dir))) {
-      if (strlen(dirent->d_name) > 4 &&
-          strcmp(&dirent->d_name[strlen(dirent->d_name) - 4], ".set") == 0) {
-        if (strcmp(dirent->d_name, "lv.set")) {
-          snprintf(str, sizeof(str), "%s/levels/%s", effectiveShareDir, dirent->d_name);
-          s->loadLevelSet(str, dirent->d_name);
-        }
-      }
-    }
-    closedir(dir);
-  }
+  const auto loadLevelSet = [s](const fs::path &directory) {
+    if (!fs::exists(directory) || !fs::is_directory(directory)) { return; }
 
-  snprintf(str, sizeof(str) - 1, "%s/levels", effectiveLocalDir);
-  dir = opendir(str);
-  if (dir) {
-    struct dirent *dirent;
-    while ((dirent = readdir(dir))) {
-      if (strlen(dirent->d_name) > 4 &&
-          strcmp(&dirent->d_name[strlen(dirent->d_name) - 4], ".set") == 0) {
-        snprintf(str, sizeof(str) - 1, "%s/levels/%s", effectiveLocalDir, dirent->d_name);
-        s->loadLevelSet(str, dirent->d_name);
+    for (const auto &item : fs::directory_iterator(directory)) {
+      const auto itemPath = fs::path(item);
+
+      if (!fs::is_regular_file(itemPath) || itemPath.filename() == "lv.set" ||
+          itemPath.extension() != ".set") {
+        continue;
       }
+
+      s->loadLevelSet((directory / itemPath.filename()).c_str(), itemPath.filename().c_str());
     }
-    closedir(dir);
-  }
+  };
+
+  loadLevelSet(fs::path(effectiveShareDir) / "levels");
+  loadLevelSet(fs::path(effectiveLocalDir) / "levels");
 
   if (!s->nLevelSets) {
     error("failed to load any levelsets, place levels in %s/levels/", effectiveShareDir);
@@ -321,7 +306,7 @@ void Settings::loadLevelSet(const char *setname, const char *shortname) {
 void Settings::save() {
   char str[256];
   snprintf(str, sizeof(str) - 1, "%s/settings", effectiveLocalDir);
-  if (pathIsLink(str)) {
+  if (fs::is_symlink(str)) {
     warning("%s is a symbolic link. Cannot save settings", str);
     return;
   }
@@ -451,7 +436,7 @@ void Settings::setLocale() {
              languageCodes[language][0][0], languageCodes[language][0][1]);
 #endif
 
-    if (!dirExists(localedir)) {
+    if (!fs::is_directory(localedir)) {
       warning("locale directory %s missing.\n", localedir);
       // language=0;
     }

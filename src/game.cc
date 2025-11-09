@@ -21,6 +21,8 @@
 
 #define MARGIN 10
 
+#include <filesystem>
+
 #include "game.h"
 
 #include "animatedCollection.h"
@@ -33,6 +35,8 @@
 #include "settings.h"
 #include "sound.h"
 #include "weather.h"
+
+namespace fs = std::filesystem;
 
 extern Color colors[5];
 
@@ -89,7 +93,7 @@ Game::Game(Map *editmap, const char *levelname) {
   loadScript(this, scmname);
   snprintf(scmname, 511, "%s/levels/%s.scm", effectiveLocalDir, levelname);
   scmname[511] = '\0';
-  if (!fileExists(scmname)) {
+  if (!fs::exists(scmname)) {
     snprintf(scmname, 511, "%s/levels/%s.scm", effectiveShareDir, levelname);
   }
   scmname[511] = '\0';
@@ -140,9 +144,9 @@ void Game::loadLevel(const char *name, Gamer *gamer) {
    * script in the share dir or viceversa */
   snprintf(mapname, sizeof(mapname) - 1, "%s/levels/%s.map", effectiveLocalDir, name);
   snprintf(scmname, sizeof(scmname) - 1, "%s/levels/%s.scm", effectiveLocalDir, name);
-  if (!fileExists(mapname))
+  if (!fs::exists(mapname))
     snprintf(mapname, sizeof(mapname), "%s/levels/%s.map", effectiveShareDir, name);
-  if (!fileExists(scmname))
+  if (!fs::exists(scmname))
     snprintf(scmname, sizeof(scmname), "%s/levels/%s.scm", effectiveShareDir, name);
   snprintf(levelName, sizeof(levelName), "%s", name);
 

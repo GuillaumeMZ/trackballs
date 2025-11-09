@@ -25,13 +25,10 @@
 #include <libintl.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <chrono>
 #include <cmath>
-#define _(String) gettext(String)
 
-#ifdef __MINGW32__
-#include <io.h>
-#define mkdir(a, ...) mkdir(a)
-#endif
+#define _(String) gettext(String)
 
 extern char effectiveShareDir[], effectiveLocalDir[], username[];
 
@@ -174,22 +171,14 @@ class Color {
 void generalInit();
 double frandom();
 
-int fileExists(char *);
-int dirExists(char *);
-int pathIsFile(char *path); /** Checks if the given path points to a true file (not links) */
-int pathIsDir(
-    char *path); /** Checks if the given path points to a true directory (not links) */
-int pathIsLink(char *path); /** Checks if the given path points to a link */
-
 /* A modulus operations which handles negative results safely */
 int mymod(int v, int m);
 /* Return the current time, and calculate elapsed time in seconds */
 extern double timeDilationFactor;
-struct timespec getMonotonicTime();
-double getTimeDifference(const struct timespec &from, const struct timespec &to);
+double getTimeDifference(const std::chrono::time_point<std::chrono::system_clock>& from, const std::chrono::time_point<std::chrono::system_clock>& to);
 
 /* Printfs for when things go wrong. Errors are fatal. _Never_ translate input. */
-void error(const char *formatstr, ...) __attribute__((__noreturn__));
+void error(const char *formatstr, ...);
 void warning(const char *formatstr, ...);
 
 /*** Globals ***/
