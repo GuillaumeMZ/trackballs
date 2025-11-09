@@ -63,7 +63,7 @@ Instructions:
 - Run Trackballs:
 
     ```sh
-    ./build/trackballs.exe
+    ./build/trackballs
     ```
 
 ### Installing Trackballs
