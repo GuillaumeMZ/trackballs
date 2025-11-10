@@ -110,17 +110,16 @@ HighScore::HighScore() {
    * directory */
   if (ALT_HIGHSCORES[0] == '~') {
     if (ALT_HIGHSCORES[1] == 0)
-      snprintf(highScorePath, sizeof(highScorePath), "%s/.trackballs/highScores",
-               getenv("HOME"));
+      strncpy(highScorePath, (fs::path(getenv("HOME")) / ".trackballs" / "highScores").c_str(), sizeof(highScorePath));
     else if (ALT_HIGHSCORES[1] == '/')
-      snprintf(highScorePath, sizeof(highScorePath), "%s%s/highScores", getenv("HOME"),
-               &ALT_HIGHSCORES[1]);
+      //wtf?
+      strncpy(highScorePath, (fs::path(std::string(getenv("HOME")) + std::string(&ALT_HIGHSCORES[1])) / "highScores").c_str(), sizeof(highScorePath));
     else { error("Bad ALT_HIGHSCORES compiled into game '%s'", ALT_HIGHSCORES); }
   } else {
-    snprintf(highScorePath, sizeof(highScorePath), "%s/highScores", ALT_HIGHSCORES);
+    strncpy(highScorePath, (fs::path(ALT_HIGHSCORES) / "highScores").c_str(), sizeof(highScorePath));
   }
 #else
-  snprintf(highScorePath, sizeof(highScorePath), "%s/highScores", effectiveShareDir);
+  strncpy(highScorePath, (fs::path(effectiveShareDir) / "highScores").c_str(), sizeof(highScorePath));
 #endif
   if (fs::is_symlink(highScorePath)) {
     warning("%s is a symbolic link. Cannot load highscores\n", highScorePath);

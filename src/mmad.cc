@@ -197,9 +197,7 @@ static SDL_GLContext createWindow() {
   if (!ctx) { error("Failed to create OpenGL context: %s\n", SDL_GetError()); }
   SDL_GL_MakeCurrent(window, NULL);
 
-  char str[256];
-  snprintf(str, sizeof(str), "%s/icons/trackballs-128x128.png", effectiveShareDir);
-  SDL_Surface *wmIcon = IMG_Load(str);
+  SDL_Surface *wmIcon = IMG_Load((fs::path(effectiveShareDir) / "icons" / "trackballs-128x128.png").c_str());
   if (wmIcon) {
     SDL_SetWindowIcon(window, wmIcon);
     SDL_FreeSurface(wmIcon);
@@ -447,7 +445,7 @@ static bool setupLocaleAndTranslations() {
 #ifdef LOCALEDIR
   snprintf(localedir, 511, "%s", LOCALEDIR);
 #else
-  snprintf(localedir, 511, "%s/locale", effectiveShareDir);
+  strncpy(localedir, (fs::path(effectiveShareDir) / "locale").c_str(), 511);
 #endif
   if (bindtextdomain(PACKAGE, localedir) == NULL) {
     warning("Failed to set text domain directory to %s", localedir);
@@ -485,51 +483,27 @@ static bool setupEnvAndPaths(const char *program_name) {
     snprintf(effectiveShareDir, sizeof(effectiveShareDir) - 1, "%s", evar);
   // printf("Looking for %s\n", effectiveShareDir);
   if (!testDir()) {
-    char thisDir[256];
-    /* From arg0/share/trackballs  */
-    snprintf(thisDir, sizeof(thisDir), "%s", program_name);
-    int i;
-    for (i = strlen(thisDir) - 1; i >= 0; i--)
-      if (thisDir[i] == '/'
-#ifdef WIN32
-          || thisDir[i] == '\\'
-#endif
-      )
+    const auto programRoot = fs::path(program_name).parent_path();
+
+    const std::array<fs::path, 6> pathsToTest = {
+      programRoot,
+      programRoot / "share" / "trackballs",
+      programRoot / ".." / "share" / "trackballs",
+      programRoot / "share",
+      programRoot / ".." / "share",
+      fs::path(SHARE_DIR)
+    };
+
+    for (const auto& path: pathsToTest) {
+      strncpy(effectiveShareDir, path.c_str(), sizeof(effectiveShareDir));
+
+      if (testDir()) {
         break;
-    if (i >= 0) thisDir[i] = 0;
-
-    /*If no directory breaks are found just use the current directory*/
-    if (i <= 0) snprintf(thisDir, sizeof(thisDir), ".");
-
-    snprintf(effectiveShareDir, sizeof(effectiveShareDir), "%s/share/trackballs", thisDir);
-
-    if (!testDir()) {
-      /* From arg0/../share/trackballs */
-      snprintf(effectiveShareDir, sizeof(effectiveShareDir), "%s/../share/trackballs",
-               thisDir);
-
-      if (!testDir()) {
-        /* From arg0/share */
-        snprintf(effectiveShareDir, sizeof(effectiveShareDir), "%s/share", thisDir);
-
-        if (!testDir()) {
-          /* From arg0/../share */
-          snprintf(effectiveShareDir, sizeof(effectiveShareDir), "%s/../share", thisDir);
-
-          if (!testDir()) {
-            /* From compilation default */
-            snprintf(effectiveShareDir, sizeof(effectiveShareDir), "%s", SHARE_DIR);
-
-            if (!testDir()) {
-              error("Could not find resource directory(%s)\n", effectiveShareDir);
-            }
-          }
-        }
       }
     }
   }
 
-  snprintf(effectiveLocalDir, sizeof(effectiveLocalDir), "%s/.trackballs", getenv("HOME"));
+  strncpy(effectiveLocalDir, (fs::path(getenv("HOME")) / ".trackballs").c_str(), sizeof(effectiveLocalDir));
   if (fs::is_symlink(effectiveLocalDir)) {
     warning("Error, %s is a symbolic link. Cannot save settings", effectiveLocalDir);
     return false;
@@ -543,6 +517,7 @@ static bool setupEnvAndPaths(const char *program_name) {
     putenv(guileLoadPath);
   }
 
+  //why?
 #ifdef WIN32
   if (NULL == getenv("HOME")) {
     static char homeEnv[MAX_PATH + 5];
@@ -675,14 +650,13 @@ int main(int argc, char **argv) {
     /* We do not need any of SDL to load and save a map */
     char mapname[512];
 
-    snprintf(mapname, sizeof(mapname) - 1, "%s/levels/%s.map", effectiveLocalDir, touchName);
+    strncpy(mapname, (fs::path(effectiveLocalDir) / "levels" / (std::string(touchName) + ".map")).c_str(), sizeof(mapname) - 1);
     if (!fs::is_regular_file(mapname))
-      snprintf(mapname, sizeof(mapname), "%s/levels/%s.map", effectiveShareDir, touchName);
+      strncpy(mapname, (fs::path(effectiveShareDir) / "levels" / (std::string(touchName) + ".map")).c_str(), sizeof(mapname));
     if (!fs::is_regular_file(mapname)) snprintf(mapname, sizeof(mapname), "%s", touchName);
     printf("Touching map %s\n", mapname);
-    Map *map = new Map(mapname);
-    map->save(mapname, (int)map->startPosition[0], (int)map->startPosition[1]);
-    delete map;
+    Map map(mapname);
+    map.save(mapname, (int)map.startPosition[0], (int)map.startPosition[1]);
     return EXIT_SUCCESS;
   }
 

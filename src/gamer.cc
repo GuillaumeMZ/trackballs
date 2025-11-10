@@ -99,7 +99,7 @@ void Gamer::save() {
   char str[256];
 
   Settings *settings = Settings::settings;
-  snprintf(str, sizeof(str) - 1, "%s/%s.gmr", effectiveLocalDir, name);
+  strncpy(str, (fs::path(effectiveLocalDir) / (std::string(name) + ".gmr")).c_str(), sizeof(str) - 1);
   if (fs::is_symlink(str)) {
     warning("Error, %s/%s.gmr is a symbolic link. Cannot save settings", effectiveLocalDir,
             name);
@@ -137,7 +137,7 @@ void *Gamer::doUpdate(void *data) {
   Gamer *gamer = (Gamer *)data;
   char str[256];
 
-  snprintf(str, sizeof(str) - 1, "%s/%s.gmr", effectiveLocalDir, gamer->name);
+  strncpy(str, (fs::path(effectiveLocalDir) / (std::string(gamer->name) + ".gmr")).c_str(), sizeof(str) - 1);
 
   SCM ip = scm_port_from_gzip(str, 256 * 256 * 128);
   if (SCM_EOF_OBJECT_P(ip)) {

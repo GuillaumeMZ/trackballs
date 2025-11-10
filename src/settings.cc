@@ -57,7 +57,7 @@ void *Settings::load(void *data) {
 
   /* Load all settings from a scheme-syntaxed config file */
   char str[256];
-  snprintf(str, sizeof(str) - 1, "%s/settings", effectiveLocalDir);
+  strncpy(str, (fs::path(effectiveLocalDir) / "settings").c_str(), sizeof(str) - 1);
   if (access(str, R_OK) != -1) {
     SCM ip = scm_open_file(scm_from_utf8_string(str), scm_from_utf8_string("r"));
     // ^ TODO catch exception
@@ -305,7 +305,7 @@ void Settings::loadLevelSet(const char *setname, const char *shortname) {
 
 void Settings::save() {
   char str[256];
-  snprintf(str, sizeof(str) - 1, "%s/settings", effectiveLocalDir);
+  strncpy(str, (fs::path(effectiveLocalDir) / "settings").c_str(), sizeof(str) - 1);
   if (fs::is_symlink(str)) {
     warning("%s is a symbolic link. Cannot save settings", str);
     return;
@@ -429,11 +429,9 @@ void Settings::setLocale() {
   if (language != 0) {
     char localedir[512];
 #ifdef LOCALEDIR
-    snprintf(localedir, 511, "%s/%c%c", LOCALEDIR, languageCodes[language][0][0],
-             languageCodes[language][0][1]);
+    strncpy(localedir, (fs::path(LOCALEDIR) / (std::to_string(languageCodes[language][0][0]) + std::to_string(languageCodes[language][0][1]))).c_str(), 511);
 #else
-    snprintf(localedir, 511, "%s/locale/%c%c", effectiveShareDir,
-             languageCodes[language][0][0], languageCodes[language][0][1]);
+    strncpy(localedir, (fs::path(effectiveShareDir) / "locale" / (std::to_string(languageCodes[language][0][0]) + std::to_string(languageCodes[language][0][1]))).c_str(), 511);
 #endif
 
     if (!fs::is_directory(localedir)) {

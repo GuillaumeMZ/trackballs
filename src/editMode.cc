@@ -270,14 +270,14 @@ void EditMode::loadMap(char* name) {
   levelname[255] = '\0';
 
   /* Set the pathname under which we will save the map */
-  snprintf(pathname, sizeof(pathname), "%s/levels/%s.map", effectiveLocalDir, name);
+  strncpy(pathname, (fs::path(effectiveLocalDir) / "levels" / name).c_str(), sizeof(pathname));
 
   // Default load the map from the home directory if existing (same as default pathname)
-  snprintf(mapname, sizeof(mapname), "%s/levels/%s.map", effectiveLocalDir, name);
+  strncpy(mapname, (fs::path(effectiveLocalDir) / "levels" / name).c_str(), sizeof(mapname));
 
   if (!fs::exists(mapname))
     // Alternativly from the share directory
-    snprintf(mapname, sizeof(mapname) - 1, "%s/levels/%s.map", effectiveShareDir, name);
+    strncpy(mapname, (fs::path(effectiveShareDir) / "levels" / name).c_str(), sizeof(mapname) - 1);
 
   /* Note. not a problem here even if the map does not exists, it will use default values
    * instead */
@@ -307,15 +307,15 @@ void EditMode::saveMap() {
   char mapname[768];
   char str[768];
 
-  snprintf(str, sizeof(str) - 1, "%s/levels", effectiveLocalDir);
+  strncpy(str, (fs::path(effectiveLocalDir) / "levels").c_str(), sizeof(str) - 1);
   if (fs::is_symlink(str)) {
     warning("Error, %s/levels is a symbolic link. Cannot save map", effectiveLocalDir);
     return;
   } else if (!fs::is_directory(str))
     fs::create_directory(str);
 
-  snprintf(mapname, sizeof(mapname) - 1, "%s/levels/%s.map", effectiveLocalDir, levelname);
-  if (fs::is_symlink(str)) {
+  strncpy(mapname, (fs::path(effectiveLocalDir) / "levels" / (std::string(levelname) + ".map")).c_str(), sizeof(mapname) - 1);
+  if (fs::is_symlink(mapname)) {
     warning("Error, %s/levels/%s.map is a symbolic link. Cannot save map", effectiveLocalDir,
             levelname);
     return;
@@ -326,9 +326,9 @@ void EditMode::saveMap() {
   doAskSave = 0;
 
   /* Check if there already exists a script file for this map */
-  snprintf(str, sizeof(str), "%s/levels/%s.scm", effectiveShareDir, levelname);
+  strncpy(str, (fs::path(effectiveShareDir) / "levels" / (std::string(levelname) + ".scm")).c_str(), sizeof(str));
   if (!fs::is_regular_file(str)) {
-    snprintf(str, sizeof(str), "%s/levels/%s.scm", effectiveLocalDir, levelname);
+    strncpy(str, (fs::path(effectiveLocalDir) / "levels" / (std::string(levelname) + ".scm")).c_str(), sizeof(str));
     if (!fs::is_regular_file(str)) {
       /* No script file exists. Create a default one */
       if (fs::is_symlink(str)) {

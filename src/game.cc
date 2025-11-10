@@ -21,6 +21,7 @@
 
 #define MARGIN 10
 
+#include <cstring>
 #include <filesystem>
 
 #include "game.h"
@@ -60,7 +61,7 @@ Game::Game(const char *name, Gamer *gamer) {
 
   /* Load the bootup script */
   char scmname[256];
-  snprintf(scmname, sizeof(scmname), "%s/levels/boot.scm", effectiveShareDir);
+  std::strncpy(scmname, (fs::path(effectiveShareDir) / "levels" / "boot.scm").c_str(), sizeof(scmname));
   loadScript(this, scmname);
 
   player1 = new Player(*this);
@@ -88,13 +89,13 @@ Game::Game(Map *editmap, const char *levelname) {
 
   /* load scripts */
   char scmname[512];
-  snprintf(scmname, sizeof(scmname), "%s/levels/boot.scm", effectiveShareDir);
+  std::strncpy(scmname, (fs::path(effectiveShareDir) / "levels" / "boot.scm").c_str(), sizeof(scmname));
   scmname[511] = '\0';
   loadScript(this, scmname);
-  snprintf(scmname, 511, "%s/levels/%s.scm", effectiveLocalDir, levelname);
+  std::strncpy(scmname, (fs::path(effectiveLocalDir) / "levels" / (std::string(levelname) + ".scm")).c_str(), 511);
   scmname[511] = '\0';
   if (!fs::exists(scmname)) {
-    snprintf(scmname, 511, "%s/levels/%s.scm", effectiveShareDir, levelname);
+    std::strncpy(scmname, (fs::path(effectiveShareDir) / "levels" / (std::string(levelname) + ".scm")).c_str(), 511);
   }
   scmname[511] = '\0';
   loadScript(this, scmname);
@@ -142,12 +143,12 @@ void Game::loadLevel(const char *name, Gamer *gamer) {
    * the home directory first (eg. ~/.trackballs/levels/{name}.map)
    * It is possible to mix using a map file in the home dir and a
    * script in the share dir or viceversa */
-  snprintf(mapname, sizeof(mapname) - 1, "%s/levels/%s.map", effectiveLocalDir, name);
-  snprintf(scmname, sizeof(scmname) - 1, "%s/levels/%s.scm", effectiveLocalDir, name);
+  std::strncpy(mapname, (fs::path(effectiveLocalDir) / "levels" / (std::string(name) + ".map")).c_str(), sizeof(mapname));
+  std::strncpy(scmname, (fs::path(effectiveLocalDir) / "levels" / (std::string(name) + ".scm")).c_str(), sizeof(scmname));
   if (!fs::exists(mapname))
-    snprintf(mapname, sizeof(mapname), "%s/levels/%s.map", effectiveShareDir, name);
+    std::strncpy(mapname, (fs::path(effectiveShareDir) / "levels" / (std::string(name) + ".map")).c_str(), sizeof(mapname));
   if (!fs::exists(scmname))
-    snprintf(scmname, sizeof(scmname), "%s/levels/%s.scm", effectiveShareDir, name);
+    std::strncpy(scmname, (fs::path(effectiveShareDir) / "levels" / (std::string(name) + ".scm")).c_str(), sizeof(scmname));
   snprintf(levelName, sizeof(levelName), "%s", name);
 
   if (Settings::settings->storeReplay) {

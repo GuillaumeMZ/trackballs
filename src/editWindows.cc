@@ -330,8 +330,7 @@ void EStatusWindow::draw() {
   }
 
   /* Draw area 3, eg. some extra info */
-  snprintf(str, sizeof(str), "%s/%s", EditMode::editMode->pathname,
-           EditMode::editMode->levelname);
+  strncpy(str, (fs::path(EditMode::editMode->pathname) / EditMode::editMode->levelname).c_str(), sizeof(str));
   addText_Left(0, fontSize / 3, row1, str, area3x + 10);
 }
 void EStatusWindow::mouseDown(int button, int /*x*/, int /*y*/) {
@@ -405,8 +404,7 @@ void ESaveWindow::draw() {
     addText_Center(CODE_NO, fontSize / 2, row2, _("No"), x + width - fontSize * 5);
   } else if (saveCnt == 2) {
     addText_Center(0, fontSize / 2, row1, _("Saving"), x + width / 2);
-    snprintf(str, sizeof(str), "%s/levels/%s", effectiveLocalDir,
-             EditMode::editMode->levelname);
+    strncpy(str, (fs::path(effectiveLocalDir) / "levels" / EditMode::editMode->levelname).c_str(), sizeof(str));
     // addText_Center(0,fontSize/2,row2,str,x+width/2);
     addText_Center(0, fontSize / 3, row2, str, x + width / 2);
     saveCnt = 1;

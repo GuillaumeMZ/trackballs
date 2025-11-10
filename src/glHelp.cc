@@ -257,7 +257,7 @@ void update2DStringCache(bool force_wipe) {
 void *menuFontForSize(int sz) {
   if (!menuFontLookup.count(sz)) {
     char str[256];
-    snprintf(str, sizeof(str), "%s/fonts/%s", effectiveShareDir, "FreeSerifBoldItalic.ttf");
+    strncpy(str, (fs::path(effectiveShareDir) / "fonts" / "FreeSerifBoldItalic.ttf").c_str(), sizeof(str));
     menuFontLookup[sz] = TTF_OpenFont(str, 2 * sz);  // barbatri
     if (!menuFontLookup[sz]) { error("failed to load font %s", str); }
   }
@@ -1003,7 +1003,7 @@ int createSnapshot() {
 
   /* find the name for the image */
   do {
-    snprintf(name, 1023, "./snapshot_%04d.png", snap_number++);
+    snprintf(name, 1023, "snapshot_%04d.png", snap_number++);
     FILE *f;
     if ((f = fopen(name, "r")) == NULL) {
       break;
@@ -1132,7 +1132,7 @@ int loadTexture(const char *name) {
   }
 
   char str[256];
-  snprintf(str, sizeof(str), "%s/images/%s", effectiveShareDir, name);
+  strncpy(str, (fs::path(effectiveShareDir) / "images" / name).c_str(), sizeof(str));
   SDL_Surface *surface = IMG_Load(str);
   if (!surface) {
     warning("Failed to load texture %s", str);
@@ -1173,7 +1173,7 @@ static GLuint loadShaderPart(const char *name, GLuint shader_type) {
     tdesc = "Fragment";
   }
 
-  snprintf(path, 256, "%s/shaders/%s", effectiveShareDir, name);
+  strncpy(path, (fs::path(effectiveShareDir) / "shaders" / name).c_str(), sizeof(path));
   GLchar *source = filetobuf(path);
   if (source == NULL) { error("%s shader %s could not be read", tdesc, path); }
   GLuint shader = glCreateShader(shader_type);
@@ -1273,7 +1273,7 @@ void glHelpInit() {
 
   TTF_Init();
   char str[256];
-  snprintf(str, sizeof(str), "%s/fonts/%s", effectiveShareDir, "menuFont.ttf");
+  strncpy(str, (fs::path(effectiveShareDir) / "fonts" / "menuFont.ttf").c_str(), sizeof(str));
   ingameFont = TTF_OpenFont(str, 30);
   if (!ingameFont) { error("failed to load font %s", str); }
 
@@ -1791,11 +1791,9 @@ GLuint LoadTexture(SDL_Surface *surface, GLfloat *texcoord) {
 }
 
 SDL_Surface *loadImage(const char *imagename) {
-  char path[512];
-  snprintf(path, 511, "%s/images/%s", effectiveShareDir, imagename);
-  path[511] = '\0';
+  const auto path = fs::path(effectiveShareDir) / "images" / imagename;
 
-  SDL_Surface *img = IMG_Load(path);
-  if (!img) error("Failed to load image '%s' because: %s", path, IMG_GetError());
+  SDL_Surface *img = IMG_Load(path.c_str());
+  if (!img) error("Failed to load image '%s' because: %s", path.c_str(), IMG_GetError());
   return img;
 }

@@ -36,7 +36,7 @@ static const char log_header_msg[] =
 static bool getLogPath(const char* level_name, char log_file[768]) {
   char str[768];
 
-  snprintf(str, sizeof(str) - 1, "%s/logs", effectiveLocalDir);
+  strncpy(str, (fs::path(effectiveLocalDir) / "logs").c_str(), sizeof(str) - 1);
   if (fs::is_symlink(str)) {
     warning("Error, %s//logs is a symbolic link. Cannot load/save replay log",
             effectiveLocalDir);
@@ -45,7 +45,7 @@ static bool getLogPath(const char* level_name, char log_file[768]) {
     fs::create_directory(str);
   }
 
-  snprintf(log_file, 768 - 1, "%s/logs/%s.log", effectiveLocalDir, level_name);
+  strncpy(log_file, (fs::path(effectiveLocalDir) / "logs" / (std::string(level_name) + ".log")).c_str(), 768 - 1);
   if (fs::is_symlink(str)) {
     warning("Error, %s/logs/%s.log is a symbolic link. Cannot load/save replay log",
             effectiveLocalDir, level_name);
