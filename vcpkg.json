@@ -2,6 +2,7 @@
 	"name": "trackballs",
 	"version-semver": "1.3.5",
 	"dependencies": [
+		"argparse",
 		"sdl2",
 		{
 			"name": "sdl2-image",

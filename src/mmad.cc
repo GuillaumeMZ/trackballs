@@ -21,6 +21,9 @@
 
 #include <chrono>
 #include <filesystem>
+#include <iostream>
+
+#include <argparse/argparse.hpp>
 
 #include "calibrateJoystickMode.h"
 #include "editMode.h"
@@ -43,7 +46,6 @@
 #include "sound.h"
 
 #include <SDL2/SDL_image.h>
-#include <getopt.h>
 #include <locale.h>
 #include <queue>
 
@@ -207,41 +209,6 @@ static SDL_GLContext createWindow() {
   SDL_GetWindowSize(window, &screenWidth, &screenHeight);
 
   return ctx;
-}
-
-static void print_usage(FILE *stream, const char *program_name) {
-  fprintf(stream, "%s %s %s\n", _("Usage:"), program_name,
-          _("[-w, -m] [-e, -l -t <level>] [-r <width>] [-s <sensitivity>]"));
-  const char *options[12][2] = {
-      {"   -h  --help            ", _("Display this usage information.")},
-      {"   -l  --level           ", _("Start from level.")},
-      {"   -w  --windowed        ", _("Run in window (Default is fullscreen)")},
-      {"   -m  --mute            ", _("Mute sound.")},
-      {"   -r  --resolution      ", _("Set resolution to 640, 800 or 1024")},
-      {"   -s  --sensitivity     ", _("Mouse sensitivity, default 1.0")},
-      {"   -f  --fps             ", _("Displays framerate")},
-      {"   -v  --version         ", _("Prints current version number")},
-      {"   -t  --touch           ", _("Updates a map to the latest format")},
-      {"   -y  --low-memory      ", _("Attempt to conserve memory usage")},
-      {"   -9  --debug-joystick  ", _("Debug joystick status")},
-      {"   -j  --repair-joystick ", _("Correct for bad joysticks")}};
-
-  for (int i = 0; i < 12; i++) fprintf(stream, "%s%s\n", options[i][0], options[i][1]);
-  fprintf(stream, "\n");
-  fprintf(stream, "%s\n", _("Important keyboard shortcuts"));
-  const char *shortcuts[5][2] = {{_("Escape"), _("Soft quit")},
-                                 {_("CapsLock"), _("Unhide mouse pointer")},
-                                 {_("CTRL-q"), _("Quit the game immediately")},
-                                 {_("CTRL-f"), _("Toggle between fullscreen/windowed mode")},
-                                 {"k", _("Kill the ball")}};
-  size_t mxlen = 0;
-  for (int i = 0; i < 5; i++) mxlen = std::max(strlen(shortcuts[i][0]), mxlen);
-  char whitespace[64];
-  for (int i = 0; i < 5; i++) {
-    memset(whitespace, ' ', 64);
-    whitespace[mxlen - strlen(shortcuts[i][0])] = 0;
-    fprintf(stream, "   %s%s   %s\n", shortcuts[i][0], whitespace, shortcuts[i][1]);
-  }
 }
 
 static bool testDir() { return fs::exists(fs::path(effectiveShareDir) / "levels"); }
@@ -605,23 +572,31 @@ int main(int argc, char **argv) {
   bool touchMode = false;
   int audio = SDL_INIT_AUDIO;
   SDL_Event event;
-  char *touchName = 0;
+  char touchName[256];
 
-  const char *const short_options = "he:l:t:wmr:s:fqvyj";
-  const struct option long_options[] = {{"help", 0, NULL, 'h'},
-                                        {"level", 1, NULL, 'l'},
-                                        {"windowed", 0, NULL, 'w'},
-                                        {"mute", 0, NULL, 'm'},
-                                        {"resolution", 1, NULL, 'r'},
-                                        {"sensitivity", 1, NULL, 's'},
-                                        {"fps", 0, NULL, 'f'},
-                                        {"version", 0, NULL, 'v'},
-                                        {"touch", 1, NULL, 't'},
-                                        {"low-memory", 0, NULL, 'y'},
-                                        {"debug-joystick", 0, NULL, '9'},
-                                        {"repair-joystick", 0, NULL, 'j'},
-                                        {NULL, 0, NULL, 0}};
-  int next_option;
+  argparse::ArgumentParser argParser("trackballs", "1.3.5");
+
+  // argParser.add_argument("-h", "--help").help("Display this usage information.");
+  argParser.add_argument("-l", "--level").help("Start from level.");
+  argParser.add_argument("-w", "--windowed").help("Run in window (Default is fullscreen)").flag();
+  argParser.add_argument("-m", "--mute").help("Mute sound.").flag();
+  argParser.add_argument("-r", "--resolution").scan<'i', int>().help("Set resolution to 640, 800 or 1024");
+  argParser.add_argument("-s", "--sensitivity").scan<'f', float>().help("Mouse sensitivity, default 1.0");
+  argParser.add_argument("-f", "--fps").help("Displays framerate").flag();
+  argParser.add_argument("-v", "--version").help("Prints current version number").flag();
+  argParser.add_argument("-t", "--touch").help("Updates a map to the latest format");
+  argParser.add_argument("-y", "--low-memory").help("Attempt to conserve memory usage").flag();
+  argParser.add_argument("-9", "--debug-joystick").help("Debug joystick status").flag();
+  argParser.add_argument("-j", "--repair-joystick").help("Correct for bad joysticks").flag();
+
+  //TODO(GuillaumeMZ): add shortcuts
+
+  try {
+    argParser.parse_args(argc, argv);
+  } catch (const std::runtime_error& error) {
+    std::cerr << "An error occurred while parsing the command-line arguments: " << error.what() << std::endl;
+    return EXIT_FAILURE;
+  }
 
   displayStartTime = std::chrono::system_clock::now();
   lastDisplayStartTime = displayStartTime - std::chrono::seconds(1);
@@ -631,73 +606,65 @@ int main(int argc, char **argv) {
   low_memory = 0;
   debug_joystick = 0;
   repair_joystick = 0;
-  do {
-#if defined(__SVR4) && defined(__sun)
-    next_option = getopt(argc, argv, short_options);
-#else
-    next_option = getopt_long(argc, argv, short_options, long_options, NULL);
-#endif
 
-    int i;
-    switch (next_option) {
-    case 'h':
-      print_usage(stdout, program_name);
-      return EXIT_SUCCESS;
-    case 'l':
-      snprintf(Settings::settings->specialLevel, sizeof(Settings::settings->specialLevel) - 1,
-               "%s", optarg);
-      Settings::settings->doSpecialLevel = 1;
-      break;
-    case 't':
-      touchMode = true;
-      touchName = optarg;
-      has_audio = false;  // no audio
-      break;
-    case 'w':
-      settings->is_windowed = 1;
-      break;
-    case 'm':
-      has_audio = false;
-      break;
-    case 'r':
-      for (i = 0; i < nScreenResolutions; i++)
-        if (screenResolutions[i][0] == atoi(optarg)) break;
-      if (i < nScreenResolutions)
-        settings->resolution = i;
-      else {
-        char estr[256];
-        snprintf(estr, 255, _("Unknown screen resolution of width %d"), i);
-        printf("%s\n", estr);
-      }
-      break;
-    case 's':
-      Settings::settings->mouseSensitivity = atof(optarg);
-      break;
-    case 'f':
-      Settings::settings->showFPS = 1;
-      break;
-    case '?':
-      print_usage(stderr, program_name);
-      return EXIT_FAILURE;
-    case -1:
-      break;
-    case 'v':
-      printf("%s v%s\n", PACKAGE, VERSION);
-      return EXIT_SUCCESS;
-    case 'y':
-      low_memory = 1;
-      break;
-    case '9':
-      debug_joystick = 1;
-      break;
-    case 'j':
-      repair_joystick = 1;
-      break;
-    default:
-      print_usage(stderr, program_name);
-      return EXIT_FAILURE;
+  if (const auto level = argParser.present("-l"); level) {
+    snprintf(Settings::settings->specialLevel, sizeof(Settings::settings->specialLevel) - 1,"%s", level->c_str());
+    Settings::settings->doSpecialLevel = 1;
+  }
+
+  if (const auto touched = argParser.present("-t"); touched) {
+    touchMode = true;
+    strncpy(touchName, touched->c_str(), 256);
+    has_audio = false;
+  }
+
+  if (argParser["-w"] == true) {
+    settings->is_windowed = 1;
+  }
+
+  if (argParser["-m"] == true) {
+    has_audio = false;
+  }
+
+  if (const auto resolution = argParser.present<int>("-r"); resolution.has_value()) {
+    int i = 999999;
+
+    for (i = 0; i < nScreenResolutions; i++) {
+      if (screenResolutions[i][0] == *resolution) break;
     }
-  } while (next_option != -1);
+
+    if (i < nScreenResolutions) {
+      settings->resolution = i;
+    }
+    else {
+      printf(_("Unknown screen resolution of width %d"), i);
+    }
+  }
+
+  if (const auto sensitivity = argParser.present<float>("-s"); sensitivity.has_value()) {
+    Settings::settings->mouseSensitivity = *sensitivity;
+  }
+
+  if (argParser["-f"] == true) {
+    Settings::settings->showFPS = 1;
+  }
+
+  if (argParser["-v"] == true) {
+    std::cout << PACKAGE << " v" << VERSION << "\n";
+    return EXIT_SUCCESS;
+  }
+
+  if (argParser["-y"] == true) {
+    low_memory = 1;
+  }
+
+  if (argParser["-9"] == true) {
+    debug_joystick = 1;
+  }
+
+  if (argParser["-j"] == true) {
+    repair_joystick = 1;
+  }
 
   printf("%s\n", _("Welcome to Trackballs."));
   char str[256];

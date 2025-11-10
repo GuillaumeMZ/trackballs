@@ -3,6 +3,7 @@ project(trackballs)
 
 # Required libraries
 list (APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
+find_package(argparse CONFIG REQUIRED)
 find_package(Guile REQUIRED)
 find_package(SDL2 CONFIG REQUIRED)
 find_package(SDL2_image CONFIG REQUIRED)
@@ -142,6 +143,7 @@ add_executable(trackballs
 )
 
 target_link_libraries(trackballs
+	argparse::argparse
 	${GUILE_LIBRARIES}
 	${OPENGL_LIBRARIES}
 	SDL2::SDL2
